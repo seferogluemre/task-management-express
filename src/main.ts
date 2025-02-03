@@ -280,7 +280,31 @@ app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTa
     res.status(500).json({ message: "Sunucu hatası" })
 })
 
+// Delete task
+app.delete('/tasks/:taskId'), async (req, res) => {
+    const taskId = +req.params.taskId;
 
+    if (!taskId) {
+        res.status(404).json({ message: "Hatalı Görev ID'si" })
+        return;
+    }
+    try {
+        const deletedTask = await prisma.task.delete({
+            where: {
+                id: taskId
+            }
+        })
+        res.json(deletedTask);
+        return;
+    } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError) {
+            if (e.code === "P2025") {
+                res.status(404).json({ message: "Görev bulunamadı" })
+                return;
+            }
+        }
+    }
+}
 
 
 
