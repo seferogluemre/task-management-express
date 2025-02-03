@@ -39,6 +39,33 @@ app.post("/users", async (req: Request<{}, {}, CreateUser>, res) => {
     }
 })
 
+app.get('/users/:userId', async (req, res) => {
+    const userId = +req.params.userId;
+    if (!userId) {
+        res.status(400).json({ message: "Hatalı kullanıcı ID'si" })
+        return;
+    }
+
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        }
+    })
+    if (!user) {
+        res.status(404).json({ message: "Kullanıcı bulunamadı" })
+        return;
+    } else {
+        res.json(user)
+    }
+
+})
+
+app.get('/users', async (req, res) => {
+    const users = await prisma.user.findMany();
+
+})
+
+
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
