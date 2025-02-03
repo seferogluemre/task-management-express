@@ -13,12 +13,14 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
-interface CreateUser {
+interface CreateUserBody {
     name: string;
     email: string;
 }
+type UpdateUserBody = Partial<CreateUserBody>
 
-app.post("/users", async (req: Request<{}, {}, CreateUser>, res) => {
+app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
+
     const data = req.body;
 
     try {
@@ -63,6 +65,34 @@ app.get('/users/:userId', async (req, res) => {
 app.get('/users', async (req, res) => {
     const users = await prisma.user.findMany();
     res.json(users)
+})
+
+const whitelistField = ["name", "email"] as const;
+
+app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUserBody>, res) => {
+    const userId = +req.params.userId;
+    const updatePayload = req.body;
+
+    const whitelistedPayload: UpdateUserBody = {};
+
+    whitelistField.forEach(fieldName => {
+        if (updatePayload[fieldName]) {
+            whitelistedPayload[fieldName] = updatePayload[fieldName]
+        }
+    })
+
+    if (!userId) {
+        res.status(404).json({ message: "Hatalı kullanıcı ID'si" })
+        return;
+    }
+
+    const updatedUser = await prisma.user.update({
+        where: {
+            id: userId,
+        },
+        data: whitelistedPayload,
+    })
+    res.json(updatedUser)
 })
 
 
