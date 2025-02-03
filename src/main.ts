@@ -85,14 +85,22 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
         res.status(404).json({ message: "Hatalı kullanıcı ID'si" })
         return;
     }
+    try {
+        const updatedUser = await prisma.user.update({
+            where: {
+                id: userId,
+            },
+            data: whitelistedPayload,
+        })
+        res.json(updatedUser)
+    } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError) {
+            if (e.code === "P2025") {
+                res.status(404).send({ message: "Kullanıcı bulunamadı" })
+            }
+        }
+    }
 
-    const updatedUser = await prisma.user.update({
-        where: {
-            id: userId,
-        },
-        data: whitelistedPayload,
-    })
-    res.json(updatedUser)
 })
 
 
