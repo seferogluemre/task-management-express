@@ -1,7 +1,7 @@
 import express, { Request } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { error } from 'console';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 
 const app = express()
 const port = 3000
@@ -34,6 +34,10 @@ app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
         return;
 
     } catch (e) {
+        if (e instanceof PrismaClientValidationError) {
+            res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
+            return;
+        }
         if (e instanceof PrismaClientKnownRequestError) {
             if (e.code === "P2002") {
                 res.status(409).json({ message: "Bu e-posta  sistemde zaten kayıtlı" })
@@ -99,6 +103,10 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
         res.json(updatedUser)
         return;
     } catch (e) {
+        if (e instanceof PrismaClientValidationError) {
+            res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
+            return;
+        }
         if (e instanceof PrismaClientKnownRequestError) {
             if (e.code === "P2025") {
                 res.status(404).json({ message: "Kullanıcı bulunamadı" })
@@ -153,11 +161,10 @@ app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
     const payload = req.body;
     const userId = payload.userId;
 
-    if (typeof userId === "string") {
+    if (typeof userId !== "number") {
         res.status(400).json({ message: "Hatalı Kullanıcı Id'si" })
         return;
     }
-
     try {
         const task = await prisma.task.create({
             data: {
@@ -169,16 +176,19 @@ app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
         res.json(task)
         return;
     } catch (e) {
-        res.status(500).json({ message: "Sunucu hatası" })
+        if (e instanceof PrismaClientValidationError) {
+            res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
+            return;
+        }
+        if (e instanceof PrismaClientKnownRequestError) {
+            if (e.code === "P2003") {
+                res.status(404).json({ message: "Kullanıcı bulunamadı" })
+                return;
+            }
+        }
     }
     res.status(500).json({ message: "Sunucu hatası" })
 })
-
-
-
-
-
-
 
 
 app.listen(port, () => {
