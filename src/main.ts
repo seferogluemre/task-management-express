@@ -21,13 +21,13 @@ type UpdateUserBody = Partial<CreateUserBody>
 
 app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
 
-    const data = req.body;
+    const payload = req.body;
 
     try {
         const user = await prisma.user.create({
             data: {
-                name: data.name,
-                email: data.email,
+                name: payload.name,
+                email: payload.email,
             },
         })
         res.json(user)
@@ -36,7 +36,7 @@ app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
     } catch (e) {
         if (e instanceof PrismaClientKnownRequestError) {
             if (e.code === "P2002") {
-                res.status(409).json({ message: "Bu e-posta adresi sistemde zaten kayıtlı" })
+                res.status(409).json({ message: "Bu e-posta  sistemde zaten kayıtlı" })
             }
         }
     }
@@ -75,13 +75,13 @@ const whitelistField = ["name", "email"] as const;
 
 app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUserBody>, res) => {
     const userId = +req.params.userId;
-    const updatePayload = req.body;
+    const payload = req.body;
 
     const whitelistedPayload: UpdateUserBody = {};
 
     whitelistField.forEach(fieldName => {
-        if (updatePayload[fieldName]) {
-            whitelistedPayload[fieldName] = updatePayload[fieldName]
+        if (payload[fieldName]) {
+            whitelistedPayload[fieldName] = payload[fieldName]
         }
     })
     if (!userId) {
@@ -142,6 +142,43 @@ app.delete('/users/:userId', async (req, res) => {
     res.status(500).json({ message: "Sunucu hatası" })
 
 })
+
+interface CreateTaskBody {
+    userId: number;
+    title: string;
+    details?: string;
+}
+
+app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
+    const payload = req.body;
+    const userId = payload.userId;
+
+    if (typeof userId === "string") {
+        res.status(400).json({ message: "Hatalı Kullanıcı Id'si" })
+        return;
+    }
+
+    try {
+        const task = await prisma.task.create({
+            data: {
+                userId,
+                title: payload.title,
+                details: payload.details,
+            },
+        })
+        res.json(task)
+        return;
+    } catch (e) {
+        res.status(500).json({ message: "Sunucu hatası" })
+    }
+    res.status(500).json({ message: "Sunucu hatası" })
+})
+
+
+
+
+
+
 
 
 app.listen(port, () => {
