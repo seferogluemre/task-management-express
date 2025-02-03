@@ -1,6 +1,5 @@
 import express, { Request } from 'express'
 import { PrismaClient } from '@prisma/client'
-import { error } from 'console';
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 
 const app = express()
@@ -165,6 +164,7 @@ app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
         res.status(400).json({ message: "Hatalı Kullanıcı Id'si" })
         return;
     }
+
     try {
         const task = await prisma.task.create({
             data: {
@@ -188,6 +188,31 @@ app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
         }
     }
     res.status(500).json({ message: "Sunucu hatası" })
+})
+
+
+app.get('/tasks/:taskId', async (req, res) => {
+    const taskId = +req.params.taskId;
+
+    if (!taskId) {
+        res.status(400).json({ message: "Hatalı Görev ID'si" })
+        return;
+    }
+
+    const task = await prisma.task.findUnique({
+        where: {
+            id: taskId,
+        }
+    })
+
+    if (!task) {
+        res.status(404).json({ message: "Görev bulunamadı" })
+        return;
+    }
+    else {
+        res.json(task)
+    }
+    res.status(500).json({ message: "Sunucu Hatası" })
 })
 
 
