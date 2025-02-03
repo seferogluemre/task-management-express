@@ -1,6 +1,7 @@
 import express, { Request } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
+import { val } from 'cheerio/dist/commonjs/api/attributes';
 
 const app = express()
 const port = 3000
@@ -16,6 +17,7 @@ interface CreateUserBody {
     name: string;
     email: string;
 }
+
 type UpdateUserBody = Partial<CreateUserBody>
 
 app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
@@ -74,7 +76,7 @@ app.get('/users', async (req, res) => {
     res.json(users)
 })
 
-const whitelistField = ["name", "email"] as const;
+const userUpdateWhitelistField = ["name", "email"] as const;
 
 app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUserBody>, res) => {
     const userId = +req.params.userId;
@@ -82,7 +84,7 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
 
     const whitelistedPayload: UpdateUserBody = {};
 
-    whitelistField.forEach(fieldName => {
+    userUpdateWhitelistField.forEach(fieldName => {
         if (payload[fieldName]) {
             whitelistedPayload[fieldName] = payload[fieldName]
         }
@@ -155,7 +157,7 @@ interface CreateTaskBody {
     title: string;
     details?: string;
 }
-
+// Tasks CRUD ROUTES ---------
 app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
     const payload = req.body;
     const userId = payload.userId;
@@ -190,7 +192,7 @@ app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
     res.status(500).json({ message: "Sunucu hatası" })
 })
 
-
+// Show Task
 app.get('/tasks/:taskId', async (req, res) => {
     const taskId = +req.params.taskId;
 
@@ -214,6 +216,46 @@ app.get('/tasks/:taskId', async (req, res) => {
     }
     res.status(500).json({ message: "Sunucu Hatası" })
 })
+
+// Show tasks
+app.get('/tasks', async (req, res) => {
+    const tasks = await prisma.task.findMany();
+    res.json(tasks)
+})
+
+interface CreateTaskBody {
+    userId: number;
+    title: string;
+    details?: string;
+}
+type UpdateTaskBody = Partial<CreateTaskBody>
+
+// Update task
+const taskUpdateWhitelistField = ["userId", "title", "details"] as const;
+
+app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTaskBody>, res) => {
+    const userId = +req.params.taskId;
+    const payload = req.body;
+
+    const whitelistedPayload: UpdateTaskBody = {};
+
+    taskUpdateWhitelistField.forEach(fieldName => {
+        const value = payload[fieldName]
+        if (value) {
+            (whitelistedPayload[fieldName] as typeof value) = value;
+        }
+    })
+
+    if (!userId) {
+        res.status(404).json({ message: "Hatalı Görev ID'si" })
+        return;
+    }
+
+    res.status(500).json({ message: "Sunucu hatası" })
+})
+
+
+
 
 
 app.listen(port, () => {
