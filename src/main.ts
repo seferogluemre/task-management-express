@@ -11,12 +11,22 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
-app.post("/users", (req: Request<{}, {}, { name: string; email: string }>, res) => {
+interface CreateUser {
+    name: string;
+    email: string
+}
+
+app.post("/users", async (req: Request<{}, {}, CreateUser>, res) => {
     const data = req.body;
-    console.log(data)
 
+    const user = await prisma.user.create({
+        data: {
+            name: data.name,
+            email: data.email,
+        },
+    })
 
-    res.send("Kullanıcı oluşturuldu")
+    res.json(user)
 })
 
 app.listen(port, () => {
