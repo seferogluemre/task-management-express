@@ -85,6 +85,7 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
         res.status(404).json({ message: "Hatalı kullanıcı ID'si" })
         return;
     }
+
     try {
         const updatedUser = await prisma.user.update({
             where: {
@@ -93,15 +94,23 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
             data: whitelistedPayload,
         })
         res.json(updatedUser)
+
     } catch (e) {
         if (e instanceof PrismaClientKnownRequestError) {
             if (e.code === "P2025") {
-                res.status(404).send({ message: "Kullanıcı bulunamadı" })
+                res.status(404).json({ message: "Kullanıcı bulunamadı" })
+                return;
+            }
+            else if (e.code === "P2002") {
+                res.status(409).json({ message: "Bu e-posta adresi sistemde zaten kayıtlı" })
+                return;
             }
         }
     }
 
+    res.status(500).json({ message: "Sunucu hatası" })
 })
+
 
 
 app.listen(port, () => {
