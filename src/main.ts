@@ -31,6 +31,7 @@ app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
             },
         })
         res.json(user)
+        return;
 
     } catch (e) {
         if (e instanceof PrismaClientKnownRequestError) {
@@ -39,6 +40,8 @@ app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
             }
         }
     }
+    res.status(500).json({ message: "Sunucu hatası" })
+
 })
 
 app.get('/users/:userId', async (req, res) => {
@@ -60,6 +63,7 @@ app.get('/users/:userId', async (req, res) => {
         res.json(user)
     }
 
+    res.status(500).json({ message: "Sunucu Hatası" })
 })
 
 app.get('/users', async (req, res) => {
@@ -80,7 +84,6 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
             whitelistedPayload[fieldName] = updatePayload[fieldName]
         }
     })
-
     if (!userId) {
         res.status(404).json({ message: "Hatalı kullanıcı ID'si" })
         return;
@@ -94,7 +97,7 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
             data: whitelistedPayload,
         })
         res.json(updatedUser)
-
+        return;
     } catch (e) {
         if (e instanceof PrismaClientKnownRequestError) {
             if (e.code === "P2025") {
@@ -111,6 +114,34 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
     res.status(500).json({ message: "Sunucu hatası" })
 })
 
+app.delete('/users/:userId', async (req, res) => {
+    const userId = +req.params.userId;
+
+    if (!userId) {
+        res.status(404).json({ message: "Hatalı kullanıcı ID'si" })
+        return;
+    }
+    try {
+        const deletedUser = await prisma.user.delete({
+            where: {
+                id: userId
+            }
+        })
+        res.json(deletedUser);
+        return;
+
+    } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError) {
+            if (e.code === "P2025") {
+                res.status(404).json({ message: "Kullanıcı bulunamadı" })
+                return;
+            }
+        }
+    }
+
+    res.status(500).json({ message: "Sunucu hatası" })
+
+})
 
 
 app.listen(port, () => {
