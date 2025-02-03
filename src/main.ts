@@ -217,7 +217,7 @@ app.get('/tasks/:taskId', async (req, res) => {
     res.status(500).json({ message: "Sunucu Hatası" })
 })
 
-// Show tasks
+// Index Show tasks
 app.get('/tasks', async (req, res) => {
     const tasks = await prisma.task.findMany();
     res.json(tasks)
@@ -232,9 +232,8 @@ type UpdateTaskBody = Partial<CreateTaskBody>
 
 // Update task
 const taskUpdateWhitelistField = ["userId", "title", "details"] as const;
-
 app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTaskBody>, res) => {
-    const userId = +req.params.taskId;
+    const taskId = +req.params.taskId;
     const payload = req.body;
 
     const whitelistedPayload: UpdateTaskBody = {};
@@ -246,9 +245,36 @@ app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTa
         }
     })
 
-    if (!userId) {
+    if (!taskId) {
         res.status(404).json({ message: "Hatalı Görev ID'si" })
         return;
+    }
+
+    try {
+        const updatedTask = await prisma.task.update({
+            where: {
+                id: taskId,
+            },
+            data: whitelistedPayload,
+        })
+        res.json(updatedTask)
+        return;
+    } catch (e) {
+        if (e instanceof PrismaClientValidationError) {
+            res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
+            return;
+        }
+        if (e instanceof PrismaClientKnownRequestError) {
+            if (e.code === "P2025") {
+                res.status(404).json({ message: "Görev bulunamadı" })
+                return;
+            }
+            else if (e.code === "P2003") {
+                res.status(404).json({ message: "Kullanıcı bulunamadı" })
+                return;
+            }
+        }
+
     }
 
     res.status(500).json({ message: "Sunucu hatası" })
