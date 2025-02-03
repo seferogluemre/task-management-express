@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "pnpm tsx ./src/main.ts",
-    "dev": "pnpm tsx watch ./src/main.ts"
+    "dev": "pnpm tsx watch ./src/main.ts",
+    "generate": "prisma generate"
   },
   "keywords": [],
   "author": "",

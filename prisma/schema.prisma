@@ -13,6 +13,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   name      String
@@ -20,6 +26,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   tasks     Task[]
+  profile   Profile?
+}
+
+model Profile {
+  id     Int     @id @default(autoincrement())
+  bio    String?
+  gender Gender
+  user   User    @relation(fields: [userId], references: [id])
+  userId Int     @unique
 }
 
 model Task {

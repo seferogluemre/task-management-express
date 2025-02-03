@@ -1,7 +1,7 @@
 import express, { Request } from 'express'
-import { PrismaClient } from '@prisma/client'
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 import { val } from 'cheerio/dist/commonjs/api/attributes';
+import { PrismaClient } from '@prisma/client';
 
 const app = express()
 const port = 3000
@@ -71,6 +71,43 @@ app.get('/users/:userId', async (req, res) => {
     res.status(500).json({ message: "Sunucu Hatası" })
 })
 
+// Upsert User Profile
+app.put('/users/:userId/profile', async (req, res) => {
+    const userId = +req.params.userId;
+    const payload = req.body;
+
+    if (!userId) {
+        res.status(400).json({ message: "Hatalı kullanıcı Id'si" })
+        return;
+    }
+
+    try {
+        const profile = await prisma.profile.upsert({
+            where: {
+                userId: userId,
+            },
+            create: {
+                userId: userId,
+                bio: payload.bio,
+                gender: payload.gender,
+            },
+            update: {
+                bio: payload.bio,
+                gender: payload.gender,
+            }
+        })
+        res.json(profile)
+        return;
+    } catch (e) {
+        if (e instanceof PrismaClientValidationError) {
+            res.status(400).json({ message: "Gönderilen veriler beklenen şemaya uyuşmuyor" })
+            return;
+        }
+    }
+
+})
+
+// Show All users
 app.get('/users', async (req, res) => {
     const users = await prisma.user.findMany();
     res.json(users)
@@ -279,11 +316,9 @@ app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTa
 
     res.status(500).json({ message: "Sunucu hatası" })
 })
-
 // Delete task
 app.delete('/tasks/:taskId'), async (req, res) => {
     const taskId = +req.params.taskId;
-
     if (!taskId) {
         res.status(404).json({ message: "Hatalı Görev ID'si" })
         return;
@@ -304,7 +339,9 @@ app.delete('/tasks/:taskId'), async (req, res) => {
             }
         }
     }
+    res.status(500).json({ message: "Sunucu hatası" })
 }
+
 
 
 
