@@ -30,11 +30,12 @@ model User {
 }
 
 model Profile {
-  id     Int     @id @default(autoincrement())
   bio    String?
   gender Gender
   user   User    @relation(fields: [userId], references: [id])
   userId Int     @unique
+
+  @@id([userId])
 }
 
 model Task {

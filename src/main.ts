@@ -103,9 +103,43 @@ app.put('/users/:userId/profile', async (req, res) => {
             res.status(400).json({ message: "Gönderilen veriler beklenen şemaya uyuşmuyor" })
             return;
         }
+        else if (e instanceof PrismaClientKnownRequestError) {
+            if (e.code === "P2003") {
+                res.status(404).json({ message: "Kullanıcı bulunamadı" })
+                return;
+            }
+        }
     }
 
+    res.status(500).json({ message: "Sunucu hatası" })
+
 })
+
+app.get('/users/:userId/profile', async (req, res) => {
+    const userId = +req.params.userId;
+
+    if (!userId) {
+        res.status(400).json({ message: "Hatalı kullanıcı Id'si" })
+        return;
+    }
+
+    const profile = await prisma.profile.findUnique({
+        where: {
+            userId: userId,
+        }
+    })
+
+    if (!profile) {
+        res.status(404).json({ message: "Profil bulunamadı" })
+        return;
+    } else {
+        res.json(profile)
+    }
+
+    res.status(500).json({ message: "Sunucu Hatası" })
+
+})
+
 
 // Show All users
 app.get('/users', async (req, res) => {
@@ -154,7 +188,9 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
                 res.status(409).json({ message: "Bu e-posta adresi sistemde zaten kayıtlı" })
                 return;
             }
+
         }
+
     }
 
     res.status(500).json({ message: "Sunucu hatası" })
@@ -341,8 +377,6 @@ app.delete('/tasks/:taskId'), async (req, res) => {
     }
     res.status(500).json({ message: "Sunucu hatası" })
 }
-
-
 
 
 app.listen(port, () => {
