@@ -20,6 +20,13 @@ interface CreateUserBody {
 
 type UpdateUserBody = Partial<CreateUserBody>
 
+interface UpsertProfile {
+    bio?: string,
+    gender?: "MALE" | "FEMALE" | "OTHER";
+}
+
+
+
 app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
 
     const payload = req.body;
@@ -29,6 +36,7 @@ app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
             data: {
                 name: payload.name,
                 email: payload.email,
+
             },
         })
         res.json(user)
@@ -72,7 +80,7 @@ app.get('/users/:userId', async (req, res) => {
 })
 
 // Upsert User Profile
-app.put('/users/:userId/profile', async (req, res) => {
+app.put('/users/:userId/profile', async (req: Request<{ userId: string }, {}, UpsertProfile>, res) => {
     const userId = +req.params.userId;
     const payload = req.body;
 
@@ -89,7 +97,7 @@ app.put('/users/:userId/profile', async (req, res) => {
             create: {
                 userId: userId,
                 bio: payload.bio,
-                gender: payload.gender,
+                gender: payload.gender!,
             },
             update: {
                 bio: payload.bio,
@@ -139,7 +147,6 @@ app.get('/users/:userId/profile', async (req, res) => {
     res.status(500).json({ message: "Sunucu Hatası" })
 
 })
-
 
 // Show All users
 app.get('/users', async (req, res) => {
@@ -377,7 +384,6 @@ app.delete('/tasks/:taskId'), async (req, res) => {
     }
     res.status(500).json({ message: "Sunucu hatası" })
 }
-
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
