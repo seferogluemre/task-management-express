@@ -1,8 +1,6 @@
 import express, { Request } from 'express'
-import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
-import { val } from 'cheerio/dist/commonjs/api/attributes';
+import { Param, PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 import { Prisma, PrismaClient, } from '@prisma/client';
-import { error } from 'console';
 
 const app = express()
 const port = 3000
@@ -275,23 +273,25 @@ interface CreateTaskBody {
     userId: number;
     title: string;
     details?: string;
+    parentTaskId?: number;
 }
 // Tasks CRUD ROUTES ---------
 app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
     const payload = req.body;
     const userId = payload.userId;
+    const parentTaskId = payload.parentTaskId;
 
     if (typeof userId !== "number") {
         res.status(400).json({ message: "Hatalı Kullanıcı Id'si" })
         return;
     }
-
     try {
         const task = await prisma.task.create({
             data: {
                 userId,
                 title: payload.title,
                 details: payload.details,
+                parentTaskId
             },
         })
         res.json(task)
@@ -343,11 +343,12 @@ interface CreateTaskBody {
     userId: number;
     title: string;
     details?: string;
+    parentTaskId?: number;
 }
 type UpdateTaskBody = Partial<CreateTaskBody>
 
 // Update task
-const taskUpdateWhitelistField = ["userId", "title", "details"] as const;
+const taskUpdateWhitelistField = ["userId", "title", "details", "parentTaskId"] as const;
 app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTaskBody>, res) => {
     const taskId = +req.params.taskId;
     const payload = req.body;
@@ -560,12 +561,12 @@ app.delete('/tags/:tagId', async (req: Request<{ tagId: string }, {}, null>, res
 })
 
 interface ChangeTaskTags {
-    tagIds: number[],
+    tags: { id: number, note?: string }[],
 }
 // Task Tags create
 app.post('/tasks/:taskId/tags', async (req: Request<{ taskId: string }, {}, ChangeTaskTags>, res) => {
     const taskId = +req.params.taskId;
-    const tagIds = req.body.tagIds;
+    const tagsPayload = req.body.tags;
 
 
     if (!taskId) {
@@ -573,6 +574,10 @@ app.post('/tasks/:taskId/tags', async (req: Request<{ taskId: string }, {}, Chan
         return;
     }
 
+    if (tagsPayload === undefined) {
+        res.status(404).json({ message: "Etiket ID'leri listesi belirtilmedi" })
+        return;
+    }
     const task = await prisma.task.findUnique({
         where: {
             id: taskId,
@@ -583,6 +588,8 @@ app.post('/tasks/:taskId/tags', async (req: Request<{ taskId: string }, {}, Chan
         res.status(404).json({ message: "Görev bulunamadı" })
         return;
     }
+
+    const tagIds = tagsPayload.map((tagPayload) => tagPayload.id)
 
     const tags = await prisma.tag.findMany({
         where: {
@@ -602,18 +609,39 @@ app.post('/tasks/:taskId/tags', async (req: Request<{ taskId: string }, {}, Chan
         return;
     }
 
+
+    await prisma.task.update({
+        where: {
+            id: taskId,
+        },
+        data: {
+            tags: {
+                deleteMany: [],
+            }
+        },
+        include: {
+            tags: true,
+        }
+    });
+
+
     const taskResponse = await prisma.task.update({
         where: {
             id: taskId,
         },
         data: {
             tags: {
-                set: tags,
+                createMany: {
+                    data: tagsPayload.map((tagPayload) => ({
+                        tagId: tagPayload.id,
+                        note: tagPayload.note
+                    }))
+                }
             }
         },
         include: { tags: true }
-    })
 
+    })
     res.status(201).json(taskResponse)
 })
 
