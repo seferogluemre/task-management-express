@@ -84,7 +84,6 @@ app.get('/users/:userId', async (req: Request<{ userId: string }, {}, null, { sh
             profile: showProfile,
         }
     })
-
     if (!user) {
         res.status(404).json({ message: "Kullanıcı bulunamadı" })
         return;
@@ -314,7 +313,6 @@ app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
 // Show Task
 app.get('/tasks/:taskId', async (req, res) => {
     const taskId = +req.params.taskId;
-
     if (!taskId) {
         res.status(400).json({ message: "Hatalı Görev ID'si" })
         return;
@@ -323,13 +321,24 @@ app.get('/tasks/:taskId', async (req, res) => {
     const task = await prisma.task.findUnique({
         where: {
             id: taskId,
+        },
+        include: {
+            parentTask: {
+                include: {
+                    parentTask: true,
+                }
+            },
+            childTasks: true,
         }
     })
+
+    res.json(task)
 
     if (!task) {
         res.status(404).json({ message: "Görev bulunamadı" })
         return;
     }
+
     res.status(500).json({ message: "Sunucu Hatası" })
 })
 
@@ -367,6 +376,19 @@ app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTa
         return;
     }
 
+    if (payload.parentTaskId) {
+
+        const parentTask = await prisma.task.findUnique({
+            where: {
+                id: payload.parentTaskId,
+            }
+        })
+        if (parentTask && parentTask.id === taskId) {
+            res.status(400).json({ message: "Görev, üst görev olarak kendisine baglanamaz" })
+            return;
+        }
+    }
+
     try {
         const updatedTask = await prisma.task.update({
             where: {
@@ -387,17 +409,22 @@ app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTa
                 return;
             }
             else if (e.code === "P2003") {
-                res.status(404).json({ message: "Kullanıcı bulunamadı" })
-                return;
+                if (e.meta!.fieldName === "Task_userId_fkey (index)") {
+                    res.status(404).json({ message: "kullanıcı bulunamadı" })
+                    return;
+                }
+                if (e.meta!.fieldName === "Task_parentTaskId_fkey (index)") {
+                    res.status(404).json({ message: "Görev bulunamadı" })
+                    return;
+                }
             }
         }
-
     }
 
     res.status(500).json({ message: "Sunucu hatası" })
 })
 // Delete task
-app.delete('/tasks/:taskId'), async (req, res) => {
+app.delete('/tasks/:taskId'), async (req: Request<{ taskId: string }, {}, null>, res) => {
     const taskId = +req.params.taskId;
     if (!taskId) {
         res.status(404).json({ message: "Hatalı Görev ID'si" })
