@@ -377,15 +377,32 @@ app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTa
     }
 
     if (payload.parentTaskId) {
+        let currentParentId: null | number = payload.parentTaskId;
 
-        const parentTask = await prisma.task.findUnique({
-            where: {
-                id: payload.parentTaskId,
+        while (currentParentId) {
+
+            if (taskId === currentParentId) {
+                res.status(400).json({ message: "Döngüsel üst görev ilişkisi kurulamaz" })
+                return;
             }
-        })
-        if (parentTask && parentTask.id === taskId) {
-            res.status(400).json({ message: "Görev, üst görev olarak kendisine baglanamaz" })
-            return;
+
+            const parentTask: {
+                parentTaskId: number | null,
+            } | null = await prisma.task.findUnique({
+                where: {
+                    id: currentParentId as number,
+                },
+                select: {
+                    parentTaskId: true,
+                }
+            })
+
+            if (!parentTask) {
+                res.status(400).json({ message: "Üst görev bulunamadı" })
+                return;
+            }
+
+            currentParentId = parentTask?.parentTaskId
         }
     }
 
