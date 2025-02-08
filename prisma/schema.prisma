@@ -47,4 +47,13 @@ model Task {
   userId      Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  tags Tag[] @relation("TaskTags")
+}
+
+model Tag {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  tasks Task[] @relation("TaskTags")
 }

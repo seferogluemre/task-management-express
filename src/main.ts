@@ -1,7 +1,7 @@
 import express, { Request } from 'express'
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 import { val } from 'cheerio/dist/commonjs/api/attributes';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient, } from '@prisma/client';
 
 const app = express()
 const port = 3000
@@ -163,8 +163,11 @@ app.get('/users/:userId/profile', async (req, res) => {
 
 })
 // Show All users
-app.get('/users', async (req, res) => {
-    const users = await prisma.user.findMany();
+app.get('/users', async (req: Request<{}, {}, UpdateUserBody>, res) => {
+    const showProfile = typeof req.query.showProfile !== "undefined";
+
+    const users = await prisma.user.findMany({ include: { profile: showProfile } });
+
     res.json(users)
 })
 
@@ -173,6 +176,8 @@ const userUpdateWhitelistField = ["name", "email"] as const;
 app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUserBody>, res) => {
     const userId = +req.params.userId;
     const payload = req.body;
+    const profilePayload = payload.profile;
+
 
     const whitelistedPayload: UpdateUserBody = {};
 
@@ -191,11 +196,30 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
             where: {
                 id: userId,
             },
-            data: whitelistedPayload,
+            data: {
+                ...whitelistedPayload, profile:
+                    profilePayload ? {
+                        upsert: {
+                            where: {
+                                userId: userId,
+                            },
+                            create: {
+                                gender: profilePayload?.gender,
+                                bio: profilePayload?.bio,
+                            },
+                            update: {
+                                gender: profilePayload?.gender,
+                                bio: profilePayload?.bio,
+                            }
+                        }
+                    } : undefined,
+            },
+            include: { profile: !!profilePayload }
         })
         res.json(updatedUser)
         return;
     } catch (e) {
+        console.log(e)
         if (e instanceof PrismaClientValidationError) {
             res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
             return;
@@ -398,6 +422,62 @@ app.delete('/tasks/:taskId'), async (req, res) => {
     }
     res.status(500).json({ message: "Sunucu hatası" })
 }
+
+interface CreateTagBody {
+    name: string;
+}
+
+// Create Tag
+app.post('/tags'), async (req: Request<{}, {}, CreateTagBody>, res) => {
+    const payload = req.body;
+
+    try {
+        const tag = await prisma.tag.create({
+            data: {
+                name: payload.name,
+            },
+        })
+        res.json(tag)
+
+        return;
+    } catch (e) {
+
+        if (e instanceof PrismaClientValidationError) {
+            res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
+            return;
+        }
+
+    }
+
+    res.status(500).json({ message: "Sunucu Hatası" });
+}
+
+// Show tag
+app.get('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, null>, res) => {
+    const tagId = +req.params.tagId;
+
+    if (!tagId) {
+        res.status(400).json({ message: "Hatalı Etiket ID'si" })
+        return;
+    }
+
+    const tag = await prisma.task.findUnique({
+        where: {
+            id: tagId,
+        }
+    })
+
+    if (!tagId) {
+        res.status(404).json({ message: "Etiket bulunamadı" })
+        return;
+    }
+    else {
+        res.json(tag)
+    }
+    res.status(500).json({ message: "Sunucu Hatası" })
+
+}
+
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
