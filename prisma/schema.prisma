@@ -17,45 +17,53 @@ enum Gender {
   MALE
   FEMALE
   OTHER
+
+  @@map("gender")
 }
 
 model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tasks     Task[]
-  profile   Profile?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tasks   Task[]
+  profile Profile?
+
+  @@map("users")
 }
 
 model Profile {
   bio    String?
   gender Gender
   user   User    @relation(fields: [userId], references: [id])
-  userId Int     @unique
+  userId Int     @unique @map("user_id")
 
   @@id([userId])
+  @@map("profiles")
 }
 
 model Task {
   id          Int     @id @default(autoincrement())
   title       String
   details     String?
-  isCompleted Boolean @default(false)
+  isCompleted Boolean @default(false) @map("is_completed")
 
   user   User @relation(fields: [userId], references: [id])
-  userId Int
+  userId Int  @map("user_id")
 
-  parentTaskId Int?
+  parentTaskId Int? @map("parent_task_id")
 
   childTasks Task[] @relation("ChildTasks")
   parentTask Task?  @relation("ChildTasks", fields: [parentTaskId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   tags TaskTag[]
+
+  @@map("tasks")
 }
 
 model Tag {
@@ -63,17 +71,20 @@ model Tag {
   name String
 
   tasks TaskTag[]
+
+  @@map("tags")
 }
 
 model TaskTag {
   task   Task @relation(fields: [taskId], references: [id])
-  taskId Int
+  taskId Int  @map("task_id")
 
   tag   Tag @relation(fields: [tagId], references: [id])
-  tagId Int
+  tagId Int @map("tag_id")
 
-  created_at DateTime @default(now())
-  note       String?
+  createdAt DateTime @default(now()) @map("created_at")
+  note      String?
 
   @@id([taskId, tagId])
+  @@map("task_tags")
 }
