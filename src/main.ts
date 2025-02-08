@@ -602,18 +602,19 @@ app.post('/tasks/:taskId/tags', async (req: Request<{ taskId: string }, {}, Chan
         return;
     }
 
-    await prisma.task.update({
+    const taskResponse = await prisma.task.update({
         where: {
             id: taskId,
         },
         data: {
             tags: {
-                connect: tags,
+                set: tags,
             }
-        }
+        },
+        include: { tags: true }
     })
 
-    res.status(400).json({ message: "Sunucu hatası" })
+    res.status(201).json(taskResponse)
 })
 
 
