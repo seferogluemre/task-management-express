@@ -2,6 +2,7 @@ import express, { Request } from 'express'
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 import { val } from 'cheerio/dist/commonjs/api/attributes';
 import { Prisma, PrismaClient, } from '@prisma/client';
+import { error } from 'console';
 
 const app = express()
 const port = 3000
@@ -329,9 +330,6 @@ app.get('/tasks/:taskId', async (req, res) => {
         res.status(404).json({ message: "Görev bulunamadı" })
         return;
     }
-    else {
-        res.json(task)
-    }
     res.status(500).json({ message: "Sunucu Hatası" })
 })
 
@@ -561,11 +559,61 @@ app.delete('/tags/:tagId', async (req: Request<{ tagId: string }, {}, null>, res
     res.status(500).json({ message: "Sunucu hatası" })
 })
 
+interface ChangeTaskTags {
+    tagIds: number[],
+}
+// Task Tags create
+app.post('/tasks/:taskId/tags', async (req: Request<{ taskId: string }, {}, ChangeTaskTags>, res) => {
+    const taskId = +req.params.taskId;
+    const tagIds = req.body.tagIds;
 
 
+    if (!taskId) {
+        res.status(400).json({ message: "Hatalı Görev ID'si" })
+        return;
+    }
 
-app.post('/tasks/:taskId/tags', async (req: Request<{ userId: string }, {}, null, { showProfile?: string }>, res) => {
+    const task = await prisma.task.findUnique({
+        where: {
+            id: taskId,
+        }
+    })
 
+    if (!task) {
+        res.status(404).json({ message: "Görev bulunamadı" })
+        return;
+    }
+
+    const tags = await prisma.tag.findMany({
+        where: {
+            id: {
+                in: tagIds
+            }
+        }
+    })
+
+    const foundTagIds = tags.map(tag => tag.id)
+    const difference = tagIds.filter((tag) => !foundTagIds.includes(tag))
+
+    if (difference.length > 0) {
+        const differenceIdsString = difference.join(", ");
+
+        res.status(400).json({ message: "Belirtilen etiketler sistemde bulunamadı: " + differenceIdsString })
+        return;
+    }
+
+    await prisma.task.update({
+        where: {
+            id: taskId,
+        },
+        data: {
+            tags: {
+                connect: tags,
+            }
+        }
+    })
+
+    res.status(400).json({ message: "Sunucu hatası" })
 })
 
 
