@@ -491,7 +491,6 @@ interface UpdateTagBody {
 
 // Update tag 
 const tagUpdateWhitelistField = ["name"] as const;
-
 app.patch('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, UpdateTagBody>, res) => {
     const tagId = +req.params.tagId;
     const payload = req.body;
@@ -519,6 +518,7 @@ app.patch('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, UpdateTagB
         })
         res.json(updatedTag)
         return;
+
     } catch (e) {
         if (e instanceof PrismaClientValidationError) {
             res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
@@ -533,6 +533,32 @@ app.patch('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, UpdateTagB
     }
 
 
+}
+
+// Tag delete
+app.delete('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, null>, res) => {
+    const tagId = +req.params.tagId;
+    if (!tagId) {
+        res.status(404).json({ message: "Hatalı Etiket ID'si" })
+        return;
+    }
+    try {
+        const deletedTag = await prisma.tag.delete({
+            where: {
+                id: tagId
+            }
+        })
+        res.json(deletedTag);
+        return;
+    } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError) {
+            if (e.code === "P2025") {
+                res.status(404).json({ message: "Etiket bulunamadı" })
+                return;
+            }
+        }
+    }
+    res.status(500).json({ message: "Sunucu hatası" })
 }
 
 
