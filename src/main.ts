@@ -165,6 +165,7 @@ app.get('/users/:userId/profile', async (req, res) => {
 
 // Show All users
 interface ListUsersQuery {
+    name?: string;
     showProfile?: string;
     limit?: string;
     page?: string;
@@ -177,10 +178,22 @@ app.get('/users', async (req: Request<{}, {}, ListUsersQuery>, res) => {
     const page = Math.max(req.query.page ? Number(req.query.page) : 1, 1);
     const skip = (page - 1) * limit;
 
+    const name = req.query.name;
+
+
     const usersCount = await prisma.user.count();
 
     const users = await prisma.user.findMany(
         {
+            where: {
+                name: {
+                    contains: name,
+                    mode: "insensitive"
+                },
+                email: {
+                    endsWith: "@gmail.com",
+                }
+            },
             take: limit,
             skip: skip,
             include: {
@@ -189,17 +202,19 @@ app.get('/users', async (req: Request<{}, {}, ListUsersQuery>, res) => {
         }
     );
 
+    const totalPages = Math.ceil(usersCount / limit)
+
     const response = {
-        count: usersCount,
         data: users,
-        pagination: {
-            previousPage: page - 1,
+        meta: {
+            count: usersCount,
+            totalPages: totalPages,
             currentPage: page,
-            nextPage: page + 1
+            limit: limit,
         }
     }
 
-    res.json(users)
+    res.json(response)
 })
 
 
