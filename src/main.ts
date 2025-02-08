@@ -427,8 +427,7 @@ interface CreateTagBody {
     name: string;
 }
 
-// Create Tag
-app.post('/tags'), async (req: Request<{}, {}, CreateTagBody>, res) => {
+app.post('/tags', async (req: Request<{}, {}, CreateTagBody>, res) => {
     const payload = req.body;
 
     try {
@@ -436,24 +435,22 @@ app.post('/tags'), async (req: Request<{}, {}, CreateTagBody>, res) => {
             data: {
                 name: payload.name,
             },
-        })
-        res.json(tag)
+        });
 
+        res.json(tag);
         return;
     } catch (e) {
-
         if (e instanceof PrismaClientValidationError) {
-            res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
+            res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." });
             return;
         }
-
     }
 
     res.status(500).json({ message: "Sunucu Hatası" });
-}
+})
 
 // Show tag
-app.get('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, null>, res) => {
+app.get('/tags/:tagId', async (req: Request<{ tagId: string }, {}, null>, res) => {
     const tagId = +req.params.tagId;
 
     if (!tagId) {
@@ -461,7 +458,7 @@ app.get('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, null>, res) 
         return;
     }
 
-    const tag = await prisma.task.findUnique({
+    const tag = await prisma.tag.findUnique({
         where: {
             id: tagId,
         }
@@ -476,7 +473,8 @@ app.get('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, null>, res) 
     }
     res.status(500).json({ message: "Sunucu Hatası" })
 
-}
+})
+
 
 // Index Show tags
 app.get('/tags', async (req, res) => {
@@ -484,14 +482,13 @@ app.get('/tags', async (req, res) => {
     res.json(tags)
 })
 
-
 interface UpdateTagBody {
     name: string;
 }
 
 // Update tag 
 const tagUpdateWhitelistField = ["name"] as const;
-app.patch('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, UpdateTagBody>, res) => {
+app.patch('/tags/:tagId', async (req: Request<{ tagId: string }, {}, UpdateTagBody>, res) => {
     const tagId = +req.params.tagId;
     const payload = req.body;
 
@@ -531,17 +528,17 @@ app.patch('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, UpdateTagB
             }
         }
     }
-
-
-}
-
+    res.status(500).json({ message: "Sunucu hatası" })
+})
 // Tag delete
-app.delete('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, null>, res) => {
+app.delete('/tags/:tagId', async (req: Request<{ tagId: string }, {}, null>, res) => {
     const tagId = +req.params.tagId;
+
     if (!tagId) {
         res.status(404).json({ message: "Hatalı Etiket ID'si" })
         return;
     }
+
     try {
         const deletedTag = await prisma.tag.delete({
             where: {
@@ -550,16 +547,44 @@ app.delete('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, null>, re
         })
         res.json(deletedTag);
         return;
+
     } catch (e) {
+
         if (e instanceof PrismaClientKnownRequestError) {
             if (e.code === "P2025") {
                 res.status(404).json({ message: "Etiket bulunamadı" })
                 return;
             }
         }
+
     }
     res.status(500).json({ message: "Sunucu hatası" })
-}
+})
+
+
+
+
+app.post('/tasks/:taskId/tags', async (req: Request<{ userId: string }, {}, null, { showProfile?: string }>, res) => {
+
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
