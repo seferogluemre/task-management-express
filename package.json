@@ -17,6 +17,7 @@
     "express": "^4.21.2"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.4.0",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.0",
     "prisma": "^6.3.0",

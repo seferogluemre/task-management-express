@@ -1,6 +1,7 @@
 import express, { Request } from 'express'
 import { Param, PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
-import { Prisma, PrismaClient, } from '@prisma/client';
+import { Gender, Prisma, PrismaClient, } from '@prisma/client';
+import { fakerTR as faker } from '@faker-js/faker'
 
 const app = express()
 const port = 3000
@@ -689,8 +690,37 @@ app.post('/tasks/:taskId/tags', async (req: Request<{ taskId: string }, {}, Chan
     res.status(201).json(taskResponse)
 })
 
+app.post('/users/generate', async (req, res) => {
+    const count = req.body.count;
+    const users = [];
+    for (let i = 0; i < count; i++) {
+        const randomName = faker.person.fullName(); // Rowan Nikolaus
+        const randomEmail = faker.internet.email(); // Kassandra.Haley@erich.biz
 
+        const profilePayload = {
+            bio: faker.lorem.lines(),
+            gender: faker.person.sexType().toUpperCase() as Gender,
+        }
 
+        const user = await prisma.user.create({
+            data: {
+                name: randomName,
+                email: randomEmail,
+                profile: {
+                    create: {
+                        bio: profilePayload.bio,
+                        gender: profilePayload.gender,
+                    }
+                }
+            },
+            include: {
+                profile: true,
+            }
+        })
+        users.push(user)
+    }
+    res.json(users)
+})
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
