@@ -478,6 +478,64 @@ app.get('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, null>, res) 
 
 }
 
+// Index Show tags
+app.get('/tags', async (req, res) => {
+    const tags = await prisma.tag.findMany();
+    res.json(tags)
+})
+
+
+interface UpdateTagBody {
+    name: string;
+}
+
+// Update tag 
+const tagUpdateWhitelistField = ["name"] as const;
+
+app.patch('/tags/:tagId'), async (req: Request<{ tagId: string }, {}, UpdateTagBody>, res) => {
+    const tagId = +req.params.tagId;
+    const payload = req.body;
+
+    if (!tagId) {
+        res.status(404).json({ message: "Hatalı Etiket ID'si" })
+        return;
+    }
+
+    const whitelistedPayload: UpdateTagBody = {};
+
+    tagUpdateWhitelistField.forEach(fieldName => {
+        const value = payload[fieldName]
+        if (value) {
+            (whitelistedPayload[fieldName] as typeof value) = value;
+        }
+    })
+
+    try {
+        const updatedTag = await prisma.tag.update({
+            where: {
+                id: tagId,
+            },
+            data: whitelistedPayload,
+        })
+        res.json(updatedTag)
+        return;
+    } catch (e) {
+        if (e instanceof PrismaClientValidationError) {
+            res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
+            return;
+        }
+        if (e instanceof PrismaClientKnownRequestError) {
+            if (e.code === "P2025") {
+                res.status(404).json({ message: "Etiket bulunamadı" })
+                return;
+            }
+        }
+    }
+
+
+}
+
+
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
