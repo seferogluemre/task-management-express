@@ -16,6 +16,10 @@ app.get('/', (req, res) => {
 interface CreateUserBody {
     name: string;
     email: string;
+    profile?: {
+        bio?: string;
+        gender: "MALE" | "FENALE" | "OTHER",
+    }
 }
 
 type UpdateUserBody = Partial<CreateUserBody>
@@ -25,23 +29,29 @@ interface UpsertProfile {
     gender?: "MALE" | "FEMALE" | "OTHER";
 }
 
-
-
 app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
-
     const payload = req.body;
+    const profilePayload = payload.profile;
 
     try {
         const user = await prisma.user.create({
             data: {
                 name: payload.name,
                 email: payload.email,
-
+                profile: !!profilePayload ? {
+                    create: {
+                        gender: profilePayload.gender,
+                        bio: profilePayload.bio,
+                    },
+                }
+                    : undefined,
             },
+            include: {
+                profile: !!profilePayload,
+            }
         })
         res.json(user)
         return;
-
     } catch (e) {
         if (e instanceof PrismaClientValidationError) {
             res.status(400).json({ message: "Gönderilen veriler beklenen veri şemasına uymuyor." })
@@ -57,8 +67,11 @@ app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
 
 })
 
-app.get('/users/:userId', async (req, res) => {
+app.get('/users/:userId', async (req: Request<{ userId: string }, {}, null, { showProfile?: string }>, res) => {
     const userId = +req.params.userId;
+    const showProfile = typeof req.query.showProfile !== "undefined";
+
+
     if (!userId) {
         res.status(400).json({ message: "Hatalı kullanıcı ID'si" })
         return;
@@ -67,8 +80,12 @@ app.get('/users/:userId', async (req, res) => {
     const user = await prisma.user.findUnique({
         where: {
             id: userId,
+        },
+        include: {
+            profile: showProfile,
         }
     })
+
     if (!user) {
         res.status(404).json({ message: "Kullanıcı bulunamadı" })
         return;
@@ -118,9 +135,7 @@ app.put('/users/:userId/profile', async (req: Request<{ userId: string }, {}, Up
             }
         }
     }
-
     res.status(500).json({ message: "Sunucu hatası" })
-
 })
 
 app.get('/users/:userId/profile', async (req, res) => {
@@ -147,7 +162,6 @@ app.get('/users/:userId/profile', async (req, res) => {
     res.status(500).json({ message: "Sunucu Hatası" })
 
 })
-
 // Show All users
 app.get('/users', async (req, res) => {
     const users = await prisma.user.findMany();
