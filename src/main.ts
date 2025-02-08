@@ -85,6 +85,7 @@ app.get('/users/:userId', async (req: Request<{ userId: string }, {}, null, { sh
             profile: showProfile,
         }
     })
+
     if (!user) {
         res.status(404).json({ message: "Kullanıcı bulunamadı" })
         return;
@@ -161,17 +162,49 @@ app.get('/users/:userId/profile', async (req, res) => {
     res.status(500).json({ message: "Sunucu Hatası" })
 
 })
-// Show All users
-app.get('/users', async (req: Request<{}, {}, UpdateUserBody>, res) => {
-    const showProfile = typeof req.query.showProfile !== "undefined";
 
-    const users = await prisma.user.findMany({ include: { profile: showProfile } });
+// Show All users
+interface ListUsersQuery {
+    showProfile?: string;
+    limit?: string;
+    page?: string;
+}
+
+app.get('/users', async (req: Request<{}, {}, ListUsersQuery>, res) => {
+
+    const showProfile = typeof req.query.showProfile !== "undefined";
+    const limit = Math.min(req.query.limit ? Number(req.query.limit) : 20, 20);
+    const page = Math.max(req.query.page ? Number(req.query.page) : 1, 1);
+    const skip = (page - 1) * limit;
+
+    const usersCount = await prisma.user.count();
+
+    const users = await prisma.user.findMany(
+        {
+            take: limit,
+            skip: skip,
+            include: {
+                profile: showProfile
+            }
+        }
+    );
+
+    const response = {
+        count: usersCount,
+        data: users,
+        pagination: {
+            previousPage: page - 1,
+            currentPage: page,
+            nextPage: page + 1
+        }
+    }
 
     res.json(users)
 })
 
-const userUpdateWhitelistField = ["name", "email"] as const;
 
+// Update User
+const userUpdateWhitelistField = ["name", "email"] as const;
 app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUserBody>, res) => {
     const userId = +req.params.userId;
     const payload = req.body;
@@ -693,9 +726,18 @@ app.post('/tasks/:taskId/tags', async (req: Request<{ taskId: string }, {}, Chan
 app.post('/users/generate', async (req, res) => {
     const count = req.body.count;
     const users = [];
+
     for (let i = 0; i < count; i++) {
-        const randomName = faker.person.fullName(); // Rowan Nikolaus
-        const randomEmail = faker.internet.email(); // Kassandra.Haley@erich.biz
+        const randomFirstName = faker.person.firstName();
+        const randomLastName = faker.person.lastName();
+
+        const randomEmail = faker.internet.email({
+            firstName: randomFirstName,
+            lastName: randomLastName,
+        });
+
+
+        const randomName = randomFirstName + " " + randomLastName;
 
         const profilePayload = {
             bio: faker.lorem.lines(),
