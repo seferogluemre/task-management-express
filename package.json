@@ -2,7 +2,7 @@
   "name": "typescript-express",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "main.ts",
   "scripts": {
     "start": "pnpm tsx ./src/main.ts",
     "dev": "pnpm tsx watch ./src/main.ts",
