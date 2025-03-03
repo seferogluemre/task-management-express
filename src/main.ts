@@ -1,5 +1,5 @@
 import express, { Request } from 'express'
-import { Param, PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
+import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 import { Gender, Prisma, PrismaClient, } from '@prisma/client';
 import { fakerTR as faker } from '@faker-js/faker'
 
@@ -490,7 +490,7 @@ app.patch('/tasks/:taskId', async (req: Request<{ taskId: string }, {}, UpdateTa
     res.status(500).json({ message: "Sunucu hatası" })
 })
 // Delete task
-app.delete('/tasks/:taskId'), async (req: Request<{ taskId: string }, {}, null>, res) => {
+app.delete('/tasks/:taskId'), async (req: Request<{ taskId: string }, {}, null>, res: Response) => {
     const taskId = +req.params.taskId;
     if (!taskId) {
         res.status(404).json({ message: "Hatalı Görev ID'si" })
