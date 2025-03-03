@@ -1,12 +1,11 @@
 import express, { Request } from 'express'
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
-import { Gender, Prisma, PrismaClient, } from '@prisma/client';
+import { Gender, PrismaClient, } from '@prisma/client';
 import { fakerTR as faker } from '@faker-js/faker'
 
 const app = express()
 const port = 3000
 const prisma = new PrismaClient();
-
 app.use(express.json())
 
 app.get('/', (req, res) => {
@@ -216,7 +215,6 @@ app.get('/users', async (req: Request<{}, {}, ListUsersQuery>, res) => {
 
     res.json(response)
 })
-
 
 // Update User
 const userUpdateWhitelistField = ["name", "email"] as const;
