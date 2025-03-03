@@ -233,6 +233,7 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
             whitelistedPayload[fieldName] = payload[fieldName]
         }
     })
+
     if (!userId) {
         res.status(404).json({ message: "Hatalı kullanıcı ID'si" })
         return;
@@ -280,9 +281,7 @@ app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUs
                 res.status(409).json({ message: "Bu e-posta adresi sistemde zaten kayıtlı" })
                 return;
             }
-
         }
-
     }
 
     res.status(500).json({ message: "Sunucu hatası" })
@@ -566,7 +565,6 @@ app.get('/tags/:tagId', async (req: Request<{ tagId: string }, {}, null>, res) =
     res.status(500).json({ message: "Sunucu Hatası" })
 
 })
-
 
 // Index Show tags
 app.get('/tags', async (req, res) => {
