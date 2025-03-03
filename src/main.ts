@@ -28,6 +28,28 @@ interface UpsertProfile {
     gender?: "MALE" | "FEMALE" | "OTHER";
 }
 
+interface CreateTaskBody {
+    userId: number;
+    title: string;
+    details?: string;
+    parentTaskId?: number;
+}
+// Show All users
+interface ListUsersQuery {
+    name?: string;
+    showProfile?: string;
+    limit?: string;
+    page?: string;
+}
+
+interface UpdateTagBody {
+    name: string;
+}
+
+interface ChangeTaskTags {
+    tags: { id: number, note?: string }[],
+}
+
 app.post("/users", async (req: Request<{}, {}, CreateUserBody>, res) => {
     const payload = req.body;
     const profilePayload = payload.profile;
@@ -162,13 +184,6 @@ app.get('/users/:userId/profile', async (req, res) => {
 
 })
 
-// Show All users
-interface ListUsersQuery {
-    name?: string;
-    showProfile?: string;
-    limit?: string;
-    page?: string;
-}
 
 app.get('/users', async (req: Request<{}, {}, ListUsersQuery>, res) => {
 
@@ -215,7 +230,6 @@ app.get('/users', async (req: Request<{}, {}, ListUsersQuery>, res) => {
 
     res.json(response)
 })
-
 // Update User
 const userUpdateWhitelistField = ["name", "email"] as const;
 app.patch('/users/:userId', async (req: Request<{ userId: string }, {}, UpdateUserBody>, res) => {
@@ -314,12 +328,6 @@ app.delete('/users/:userId', async (req, res) => {
 
 })
 
-interface CreateTaskBody {
-    userId: number;
-    title: string;
-    details?: string;
-    parentTaskId?: number;
-}
 // Tasks CRUD ROUTES ---------
 app.post("/tasks", async (req: Request<{}, {}, CreateTaskBody>, res) => {
     const payload = req.body;
@@ -570,10 +578,6 @@ app.get('/tags', async (req, res) => {
     res.json(tags)
 })
 
-interface UpdateTagBody {
-    name: string;
-}
-
 // Update tag 
 const tagUpdateWhitelistField = ["name"] as const;
 app.patch('/tags/:tagId', async (req: Request<{ tagId: string }, {}, UpdateTagBody>, res) => {
@@ -649,9 +653,7 @@ app.delete('/tags/:tagId', async (req: Request<{ tagId: string }, {}, null>, res
     res.status(500).json({ message: "Sunucu hatası" })
 })
 
-interface ChangeTaskTags {
-    tags: { id: number, note?: string }[],
-}
+
 // Task Tags create
 app.post('/tasks/:taskId/tags', async (req: Request<{ taskId: string }, {}, ChangeTaskTags>, res) => {
     const taskId = +req.params.taskId;
